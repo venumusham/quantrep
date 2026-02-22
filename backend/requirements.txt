@@ -1,0 +1,5 @@
+openchart
+flask
+flask-cors
+numpy
+gunicorn

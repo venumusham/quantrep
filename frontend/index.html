@@ -1,0 +1,1368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QuantRep — Options Backtesting & Strategy Simulator</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0a0b0e; --bg2:#0f1117; --bg3:#14161d; --border:#1e2130;
+    --accent:#00e5a0; --accent2:#7c5cfc; --accent3:#ff6b35;
+    --red:#ff4560; --green:#00e5a0; --text:#e8eaf0; --muted:#6b7280; --card:#111318;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;overflow-x:hidden;}
+
+  /* ── NAV ── */
+  nav{display:flex;align-items:center;justify-content:space-between;padding:0 40px;height:60px;
+      background:rgba(10,11,14,.95);border-bottom:1px solid var(--border);
+      position:fixed;top:0;left:0;right:0;z-index:100;backdrop-filter:blur(12px);}
+  .logo{display:flex;align-items:center;gap:10px;font-size:20px;font-weight:800;letter-spacing:-.5px;}
+  .logo-icon{width:32px;height:32px;background:linear-gradient(135deg,var(--accent),var(--accent2));
+             border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;}
+  nav ul{display:flex;gap:4px;list-style:none;}
+  nav ul a{color:var(--muted);text-decoration:none;font-size:13px;font-weight:500;
+           padding:6px 14px;border-radius:6px;transition:all .2s;cursor:pointer;}
+  nav ul a:hover,nav ul a.active{color:var(--text);background:var(--bg3);}
+  .nav-right{display:flex;align-items:center;gap:10px;}
+  .btn-outline{background:transparent;border:1px solid var(--border);color:var(--text);
+               padding:8px 18px;border-radius:8px;font-family:'Syne',sans-serif;font-size:13px;
+               font-weight:600;cursor:pointer;transition:all .2s;}
+  .btn-outline:hover{border-color:var(--accent);color:var(--accent);}
+  .btn-primary{background:var(--accent);border:none;color:#000;padding:8px 18px;border-radius:8px;
+               font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;}
+  .btn-primary:hover{background:#00c88a;transform:translateY(-1px);}
+
+  /* ── APP ── */
+  .app-container{display:flex;height:100vh;padding-top:60px;}
+
+  /* ── SIDEBAR ── */
+  .sidebar{width:220px;min-width:220px;background:var(--bg2);border-right:1px solid var(--border);
+           display:flex;flex-direction:column;padding:20px 12px;gap:4px;overflow-y:auto;}
+  .sidebar-section-label{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;
+                          color:var(--muted);padding:8px 12px 4px;}
+  .sidebar-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;
+                cursor:pointer;font-size:13px;font-weight:500;color:var(--muted);transition:all .15s;}
+  .sidebar-item:hover{color:var(--text);background:var(--bg3);}
+  .sidebar-item.active{color:var(--accent);background:rgba(0,229,160,.08);}
+  .sidebar-item .icon{font-size:16px;min-width:20px;text-align:center;}
+  .badge{margin-left:auto;background:var(--accent2);color:#fff;font-size:9px;font-weight:700;
+         padding:2px 6px;border-radius:10px;letter-spacing:.5px;}
+
+  /* ── MAIN ── */
+  .main-content{flex:1;overflow-y:auto;background:var(--bg);}
+  .dashboard{padding:28px 32px;}
+  .page-title{font-size:22px;font-weight:800;margin-bottom:4px;}
+  .page-subtitle{font-size:13px;color:var(--muted);margin-bottom:24px;}
+
+  /* ── CARDS ── */
+  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+  .card-header{display:flex;align-items:center;justify-content:space-between;
+               padding:16px 20px;border-bottom:1px solid var(--border);}
+  .card-title{font-size:13px;font-weight:700;letter-spacing:.3px;}
+  .card-action{font-size:11px;color:var(--accent);cursor:pointer;font-weight:600;}
+  .card-action:hover{text-decoration:underline;}
+
+  /* ── STATS ── */
+  .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;}
+  .stat-card{background:var(--card);border:1px solid var(--border);border-radius:12px;
+             padding:18px 20px;position:relative;overflow:hidden;}
+  .stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+  .stat-card.green::before{background:var(--accent);}
+  .stat-card.purple::before{background:var(--accent2);}
+  .stat-card.orange::before{background:var(--accent3);}
+  .stat-card.red::before{background:var(--red);}
+  .stat-label{font-size:11px;font-weight:600;color:var(--muted);letter-spacing:.5px;
+              text-transform:uppercase;margin-bottom:8px;}
+  .stat-value{font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:500;
+              line-height:1;margin-bottom:6px;}
+  .stat-value.green{color:var(--green);}
+  .stat-value.red{color:var(--red);}
+  .stat-change{font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--muted);}
+  .stat-change.pos{color:var(--green);}
+  .stat-change.neg{color:var(--red);}
+
+  /* ── GRID ── */
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;}
+
+  /* ── FORMS ── */
+  .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
+  .form-group{display:flex;flex-direction:column;gap:6px;}
+  .form-label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
+  .form-control{background:var(--bg3);border:1px solid var(--border);color:var(--text);
+                padding:9px 12px;border-radius:8px;font-family:'Syne',sans-serif;font-size:13px;
+                outline:none;transition:border-color .2s;}
+  .form-control:focus{border-color:var(--accent);}
+  select.form-control{cursor:pointer;}
+
+  /* ── INDICES BAR ── */
+  .indices-bar{display:flex;background:var(--bg2);border-bottom:1px solid var(--border);overflow-x:auto;flex-shrink:0;}
+  .index-item{display:flex;align-items:center;gap:10px;padding:8px 20px;border-right:1px solid var(--border);
+              white-space:nowrap;font-size:12px;cursor:pointer;transition:background .15s;}
+  .index-item:hover{background:var(--bg3);}
+  .index-name{font-weight:700;font-size:11px;color:var(--muted);text-transform:uppercase;}
+  .index-value{font-family:'JetBrains Mono',monospace;font-weight:500;font-size:13px;}
+  .index-change.pos{color:var(--green);}
+  .index-change.neg{color:var(--red);}
+
+  /* ── TABLES ── */
+  .legs-table,.backtest-table,.chain-table{width:100%;border-collapse:collapse;font-size:12px;}
+  .legs-table th,.backtest-table th{text-align:left;padding:8px 10px;font-weight:600;color:var(--muted);
+    font-size:10px;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);}
+  .legs-table td,.backtest-table td{padding:10px 10px;border-bottom:1px solid rgba(30,33,48,.5);
+    font-family:'JetBrains Mono',monospace;font-size:12px;}
+  .backtest-table th{background:var(--bg3);}
+  tr:hover td{background:rgba(255,255,255,.02);}
+
+  .chain-table th{padding:8px 10px;text-align:center;font-weight:700;color:var(--muted);
+    font-size:9px;text-transform:uppercase;letter-spacing:.5px;background:var(--bg3);}
+  .chain-table td{padding:7px 10px;text-align:center;font-family:'JetBrains Mono',monospace;
+    border-bottom:1px solid rgba(30,33,48,.5);cursor:pointer;font-size:11px;}
+  .chain-table .atm td{background:rgba(0,229,160,.05);}
+  .chain-table .atm td.strike-col{font-weight:700;color:var(--accent);}
+  .call-side{color:#a5f3d0;}
+  .put-side{color:#fca5a5;}
+
+  /* ── LEGS ── */
+  .leg-type{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:.5px;}
+  .leg-type.buy{background:rgba(0,229,160,.15);color:var(--accent);}
+  .leg-type.sell{background:rgba(255,69,96,.15);color:var(--red);}
+
+  /* ── RESULTS ── */
+  .results-panel{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:20px;}
+  .result-item{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px 14px;}
+  .result-label{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;
+                letter-spacing:.5px;margin-bottom:4px;}
+  .result-value{font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:500;}
+
+  /* ── BUTTONS ── */
+  .run-btn{width:100%;background:linear-gradient(135deg,var(--accent),#00b37a);border:none;
+           color:#000;padding:13px;border-radius:10px;font-family:'Syne',sans-serif;font-size:14px;
+           font-weight:800;cursor:pointer;transition:all .2s;letter-spacing:.5px;margin-top:16px;}
+  .run-btn:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,229,160,.25);}
+  .run-btn:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+  .preset-btn{background:var(--bg3);border:1px solid var(--border);color:var(--text);
+              padding:8px 12px;border-radius:8px;font-family:'Syne',sans-serif;
+              font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;text-align:center;}
+  .preset-btn:hover{border-color:var(--accent);color:var(--accent);}
+  .preset-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:16px 20px;}
+
+  /* ── PnL ROW ── */
+  .pnl-row{display:flex;justify-content:space-between;align-items:center;
+           padding:10px 20px;border-top:1px solid var(--border);font-size:12px;}
+  .pnl-row .label{color:var(--muted);}
+
+  /* ── MARKET STATUS ── */
+  .market-status{display:flex;align-items:center;gap:6px;padding:4px 10px;
+                 background:rgba(0,229,160,.08);border:1px solid rgba(0,229,160,.2);
+                 border-radius:20px;font-size:11px;font-weight:600;color:var(--accent);}
+  .status-dot{width:6px;height:6px;background:var(--accent);border-radius:50%;animation:pulse 2s infinite;}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+  /* ── SECTIONS ── */
+  .section{display:none;}
+  .section.active{display:block;}
+  .landing-page{display:block;}
+  .app-container{display:none;}
+  body.app-mode .app-container{display:flex;}
+  body.app-mode .landing-page{display:none;}
+
+  /* ── TABS ── */
+  .tabs{display:flex;background:var(--bg3);border-radius:8px;padding:3px;}
+  .tab{padding:7px 16px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;
+       color:var(--muted);transition:all .15s;}
+  .tab.active{background:var(--bg2);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.3);}
+
+  /* ── SPINNER ── */
+  .spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(0,229,160,.3);
+           border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .loading-row{display:flex;align-items:center;gap:10px;justify-content:center;
+               padding:32px;color:var(--muted);font-size:13px;}
+
+  /* ── NOTIFICATION ── */
+  .notification{position:fixed;bottom:24px;right:24px;background:var(--card);
+                border:1px solid var(--border);border-left:3px solid var(--accent);
+                border-radius:10px;padding:14px 18px;font-size:13px;font-weight:500;
+                max-width:300px;z-index:1000;transform:translateX(120%);transition:transform .3s ease;}
+  .notification.show{transform:translateX(0);}
+  .notification.error{border-left-color:var(--red);}
+
+  /* ── LANDING ── */
+  .hero{display:flex;flex-direction:column;align-items:center;justify-content:center;
+        text-align:center;padding:80px 40px;position:relative;overflow:hidden;
+        min-height:calc(100vh - 60px);}
+  .hero::before{content:'';position:absolute;width:600px;height:600px;
+                background:radial-gradient(circle,rgba(0,229,160,.06) 0%,transparent 70%);
+                top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;}
+  .hero-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(0,229,160,.08);
+              border:1px solid rgba(0,229,160,.2);color:var(--accent);padding:6px 16px;
+              border-radius:20px;font-size:12px;font-weight:600;margin-bottom:32px;letter-spacing:.5px;}
+  .hero h1{font-size:64px;font-weight:800;line-height:1.05;margin-bottom:20px;
+           letter-spacing:-2px;max-width:800px;}
+  .hero h1 span{color:var(--accent);}
+  .hero p{font-size:18px;color:var(--muted);max-width:540px;line-height:1.6;margin-bottom:40px;}
+  .hero-cta{display:flex;gap:12px;margin-bottom:60px;}
+  .btn-large{padding:14px 32px;font-size:15px;border-radius:10px;font-weight:700;
+             font-family:'Syne',sans-serif;cursor:pointer;transition:all .2s;}
+  .btn-large.primary{background:var(--accent);color:#000;border:none;}
+  .btn-large.primary:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(0,229,160,.3);}
+  .btn-large.secondary{background:transparent;color:var(--text);border:1px solid var(--border);}
+  .btn-large.secondary:hover{border-color:var(--accent);color:var(--accent);}
+  .hero-stats{display:flex;gap:48px;}
+  .hero-stat{text-align:center;}
+  .hero-stat-value{font-family:'JetBrains Mono',monospace;font-size:32px;font-weight:500;color:var(--accent);}
+  .hero-stat-label{font-size:12px;color:var(--muted);margin-top:4px;font-weight:600;}
+  .features{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;padding:40px;}
+  .feature-card{background:var(--card);border:1px solid var(--border);border-radius:16px;
+                padding:28px;transition:all .2s;}
+  .feature-card:hover{border-color:rgba(0,229,160,.3);transform:translateY(-2px);}
+  .feature-icon{font-size:28px;margin-bottom:16px;}
+  .feature-title{font-size:16px;font-weight:700;margin-bottom:8px;}
+  .feature-desc{font-size:13px;color:var(--muted);line-height:1.6;}
+
+  /* ── ERROR BOX ── */
+  .error-box{background:rgba(255,69,96,.08);border:1px solid rgba(255,69,96,.2);
+             border-radius:8px;padding:14px 18px;font-size:13px;color:var(--red);margin:16px 20px;}
+
+  /* ── API STATUS ── */
+  .api-status{display:flex;align-items:center;gap:8px;padding:10px 16px;
+              background:var(--bg3);border-bottom:1px solid var(--border);font-size:12px;}
+  .api-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);}
+  .api-dot.online{background:var(--green);}
+  .api-dot.offline{background:var(--red);}
+</style>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav>
+  <div class="logo">
+    <div class="logo-icon">📈</div>
+    QuantRep
+  </div>
+  <ul>
+    <li><a onclick="showLanding()" id="nav-home" class="active">Home</a></li>
+    <li><a onclick="enterApp('dashboard')" id="nav-dashboard">Dashboard</a></li>
+    <li><a onclick="enterApp('backtest')" id="nav-backtest">Backtest</a></li>
+    <li><a onclick="enterApp('simulator')" id="nav-simulator">Simulator</a></li>
+    <li><a onclick="enterApp('chain')" id="nav-chain">Options Chain</a></li>
+  </ul>
+  <div class="nav-right">
+    <div class="market-status" id="marketStatus">
+      <div class="status-dot"></div>
+      Connecting…
+    </div>
+    <button class="btn-outline" onclick="enterApp('dashboard')">Sign In</button>
+    <button class="btn-primary" onclick="enterApp('dashboard')">Get Started Free</button>
+  </div>
+</nav>
+
+<!-- LANDING -->
+<div class="landing-page" id="landingPage">
+  <div class="hero">
+    <div class="hero-badge">🇮🇳 Real NSE Data via OpenChart</div>
+    <h1>Test. Simulate.<br><span>Trade Smarter.</span></h1>
+    <p>Backtest your options strategies on real Nifty, BankNifty & FinNifty data — powered by OpenChart & Black-Scholes pricing.</p>
+    <div class="hero-cta">
+      <button class="btn-large primary" onclick="enterApp('backtest')">Start Backtesting →</button>
+      <button class="btn-large secondary" onclick="enterApp('simulator')">Strategy Simulator</button>
+    </div>
+    <div class="hero-stats">
+      <div class="hero-stat"><div class="hero-stat-value">Real</div><div class="hero-stat-label">NSE Data</div></div>
+      <div class="hero-stat"><div class="hero-stat-value">B-S</div><div class="hero-stat-label">Options Pricing</div></div>
+      <div class="hero-stat"><div class="hero-stat-value">Free</div><div class="hero-stat-label">OpenChart</div></div>
+      <div class="hero-stat"><div class="hero-stat-value">Live</div><div class="hero-stat-label">Spot Prices</div></div>
+    </div>
+  </div>
+  <div class="features">
+    <div class="feature-card"><div class="feature-icon">⚡</div><div class="feature-title">Real NSE Data</div><div class="feature-desc">Historical Nifty OHLCV via OpenChart — NSE's own public API. No vendor fees, no subscriptions.</div></div>
+    <div class="feature-card"><div class="feature-icon">🔢</div><div class="feature-title">Black-Scholes Pricing</div><div class="feature-desc">Options priced using Black-Scholes with IV smile. Greeks (Delta, Gamma, Theta, Vega) calculated in real-time.</div></div>
+    <div class="feature-card"><div class="feature-icon">📊</div><div class="feature-title">Strategy Backtester</div><div class="feature-desc">Test Straddle, Strangle, Iron Condor, Butterfly and custom multi-leg strategies on real historical spot data.</div></div>
+    <div class="feature-card"><div class="feature-icon">🎯</div><div class="feature-title">Payoff Simulator</div><div class="feature-desc">Build any strategy and instantly visualize the payoff diagram at expiry with breakeven points marked.</div></div>
+    <div class="feature-card"><div class="feature-icon">🔗</div><div class="feature-title">Live Options Chain</div><div class="feature-desc">Real-time options chain built from live spot prices with IV, Delta, and OI estimates.</div></div>
+    <div class="feature-card"><div class="feature-icon">📉</div><div class="feature-title">Equity Curve & Stats</div><div class="feature-desc">Full performance analytics: Win rate, Sharpe ratio, max drawdown, profit factor from real backtest data.</div></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div class="app-container" id="appContainer">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-section-label">Main</div>
+    <div class="sidebar-item active" onclick="switchSection('dashboard')" id="sb-dashboard"><span class="icon">⊞</span> Dashboard</div>
+    <div class="sidebar-item" onclick="switchSection('backtest')" id="sb-backtest"><span class="icon">⏮</span> Backtester</div>
+    <div class="sidebar-item" onclick="switchSection('simulator')" id="sb-simulator"><span class="icon">🎮</span> Simulator</div>
+    <div class="sidebar-item" onclick="switchSection('chain')" id="sb-chain"><span class="icon">🔗</span> Options Chain</div>
+    <div class="sidebar-section-label" style="margin-top:12px">Data</div>
+    <div class="sidebar-item" onclick="switchSection('history')" id="sb-history"><span class="icon">📈</span> Price History</div>
+    <div class="sidebar-section-label" style="margin-top:12px">Info</div>
+    <div class="sidebar-item" onclick="switchSection('setup')" id="sb-setup"><span class="icon">⚙️</span> Setup Guide</div>
+
+    <!-- Backend status -->
+    <div style="margin-top:auto;padding:12px;border-top:1px solid var(--border)">
+      <div style="font-size:10px;color:var(--muted);font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">Backend</div>
+      <div style="display:flex;align-items:center;gap:8px;font-size:11px;">
+        <div class="api-dot" id="apiDot"></div>
+        <span id="apiStatusText" style="color:var(--muted)">Checking…</span>
+      </div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px">localhost:5000</div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main-content">
+    <!-- Indices bar -->
+    <div class="indices-bar" id="indicesBar">
+      <div class="index-item"><span class="index-name">NIFTY 50</span><span class="index-value" id="idx-nifty">—</span><span class="index-change" id="idx-nifty-chng"></span></div>
+      <div class="index-item"><span class="index-name">BANKNIFTY</span><span class="index-value" id="idx-bnf">—</span><span class="index-change" id="idx-bnf-chng"></span></div>
+      <div class="index-item"><span class="index-name">FINNIFTY</span><span class="index-value" id="idx-fin">—</span><span class="index-change" id="idx-fin-chng"></span></div>
+      <div class="index-item" style="margin-left:auto;border-left:1px solid var(--border)">
+        <span class="index-name">Last Updated</span>
+        <span class="index-value" id="lastUpdated" style="font-size:11px;color:var(--muted)">—</span>
+      </div>
+    </div>
+
+    <!-- ══ DASHBOARD ══ -->
+    <div class="section active" id="section-dashboard">
+      <div class="dashboard">
+        <div class="page-title">Dashboard</div>
+        <div class="page-subtitle">Live NSE market overview</div>
+
+        <div class="stats-row" id="dashStats">
+          <div class="stat-card green"><div class="stat-label">NIFTY 50</div><div class="stat-value green" id="dash-nifty">—</div><div class="stat-change" id="dash-nifty-chng">Loading…</div></div>
+          <div class="stat-card purple"><div class="stat-label">BANKNIFTY</div><div class="stat-value" style="color:var(--accent2)" id="dash-bnf">—</div><div class="stat-change" id="dash-bnf-chng">Loading…</div></div>
+          <div class="stat-card orange"><div class="stat-label">FINNIFTY</div><div class="stat-value" style="color:var(--accent3)" id="dash-fin">—</div><div class="stat-change" id="dash-fin-chng">Loading…</div></div>
+          <div class="stat-card red"><div class="stat-label">Data Source</div><div class="stat-value" style="font-size:18px;color:var(--accent)">OpenChart</div><div class="stat-change">NSE Public API</div></div>
+        </div>
+
+        <div class="grid-2">
+          <!-- quick backtest -->
+          <div class="card">
+            <div class="card-header"><span class="card-title">Quick Backtest</span><span class="card-action" onclick="switchSection('backtest')">Full Backtester →</span></div>
+            <div style="padding:20px">
+              <div class="form-row">
+                <div class="form-group"><label class="form-label">Index</label>
+                  <select class="form-control" id="qb-index"><option value="Nifty 50">NIFTY 50</option><option value="BANKNIFTY">BANKNIFTY</option><option value="FINNIFTY">FINNIFTY</option></select></div>
+                <div class="form-group"><label class="form-label">Strategy</label>
+                  <select class="form-control" id="qb-strategy">
+                    <option value="straddle">Short Straddle</option>
+                    <option value="strangle">Short Strangle</option>
+                    <option value="iron_condor">Iron Condor</option>
+                    <option value="butterfly">Iron Butterfly</option>
+                  </select></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label class="form-label">From</label><input type="date" class="form-control" id="qb-from" value="2024-01-01"></div>
+                <div class="form-group"><label class="form-label">To</label><input type="date" class="form-control" id="qb-to" value="2024-12-31"></div>
+              </div>
+              <button class="run-btn" onclick="runQuickBacktest()" id="qbBtn">▶ Run Backtest</button>
+            </div>
+            <div id="qbResults" style="display:none">
+              <div class="results-panel">
+                <div class="result-item"><div class="result-label">Total P&L</div><div class="result-value" id="qb-pnl">—</div></div>
+                <div class="result-item"><div class="result-label">Win Rate</div><div class="result-value" id="qb-wr">—</div></div>
+                <div class="result-item"><div class="result-label">Trades</div><div class="result-value" id="qb-trades">—</div></div>
+                <div class="result-item"><div class="result-label">Sharpe</div><div class="result-value" id="qb-sharpe">—</div></div>
+                <div class="result-item"><div class="result-label">Max Drawdown</div><div class="result-value" id="qb-dd">—</div></div>
+                <div class="result-item"><div class="result-label">Profit Factor</div><div class="result-value" id="qb-pf">—</div></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Equity chart -->
+          <div class="card">
+            <div class="card-header"><span class="card-title">Equity Curve</span><span id="equityChartLabel" style="font-size:11px;color:var(--muted)">Run a backtest to populate</span></div>
+            <div style="padding:20px"><canvas id="equityChart" height="200" style="width:100%"></canvas></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ BACKTESTER ══ -->
+    <div class="section" id="section-backtest">
+      <div class="dashboard">
+        <div class="page-title">Strategy Backtester</div>
+        <div class="page-subtitle">Real Nifty data · Black-Scholes option pricing · Weekly expiry simulation</div>
+
+        <div class="grid-2">
+          <!-- Config -->
+          <div class="card">
+            <div class="card-header"><span class="card-title">Configuration</span></div>
+            <div style="padding:20px">
+              <div class="form-row">
+                <div class="form-group"><label class="form-label">Index</label>
+                  <select class="form-control" id="bt-index">
+                    <option value="Nifty 50">NIFTY 50</option>
+                    <option value="BANKNIFTY">BANKNIFTY</option>
+                    <option value="FINNIFTY">FINNIFTY</option>
+                  </select></div>
+                <div class="form-group"><label class="form-label">Expiry Type</label>
+                  <select class="form-control" id="bt-expiry"><option value="weekly">Weekly</option><option value="monthly">Monthly</option></select></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label class="form-label">From</label><input type="date" class="form-control" id="bt-from" value="2024-01-01"></div>
+                <div class="form-group"><label class="form-label">To</label><input type="date" class="form-control" id="bt-to" value="2024-12-31"></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label class="form-label">Stop Loss %</label><input type="number" class="form-control" id="bt-sl" value="50" min="0"></div>
+                <div class="form-group"><label class="form-label">Target %</label><input type="number" class="form-control" id="bt-target" value="30" min="0"></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label class="form-label">Lots</label><input type="number" class="form-control" id="bt-lots" value="1" min="1"></div>
+                <div class="form-group"><label class="form-label">Slippage (pts)</label><input type="number" class="form-control" id="bt-slip" value="2"></div>
+              </div>
+            </div>
+
+            <div class="card-header" style="border-top:1px solid var(--border)">
+              <span class="card-title">Strategy Legs</span>
+              <span class="card-action" onclick="addBtLeg()">+ Add Leg</span>
+            </div>
+            <div style="padding:0 4px;overflow-x:auto">
+              <table class="legs-table">
+                <thead><tr><th>B/S</th><th>Type</th><th>Offset (pts)</th><th></th></tr></thead>
+                <tbody id="btLegsBody">
+                  <tr><td><span class="leg-type sell">SELL</span></td><td>CE</td><td>0 (ATM)</td><td style="color:var(--red);cursor:pointer" onclick="this.closest('tr').remove()">✕</td></tr>
+                  <tr><td><span class="leg-type sell">SELL</span></td><td>PE</td><td>0 (ATM)</td><td style="color:var(--red);cursor:pointer" onclick="this.closest('tr').remove()">✕</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div style="padding:16px 20px">
+              <div class="preset-grid" style="padding:0;margin-bottom:12px">
+                <button class="preset-btn" onclick="loadBtPreset('straddle')">Straddle</button>
+                <button class="preset-btn" onclick="loadBtPreset('strangle')">Strangle</button>
+                <button class="preset-btn" onclick="loadBtPreset('iron_condor')">Iron Condor</button>
+                <button class="preset-btn" onclick="loadBtPreset('butterfly')">Butterfly</button>
+                <button class="preset-btn" onclick="loadBtPreset('bull_call')">Bull Call</button>
+                <button class="preset-btn" onclick="loadBtPreset('bear_put')">Bear Put</button>
+              </div>
+              <button class="run-btn" onclick="runBacktest()" id="btRunBtn">▶ Run Backtest</button>
+            </div>
+          </div>
+
+          <!-- Results -->
+          <div>
+            <div class="card" style="margin-bottom:16px">
+              <div class="card-header"><span class="card-title">Results</span><span class="card-action" id="btExportBtn" onclick="exportCsv()" style="display:none">Export CSV</span></div>
+              <div class="results-panel">
+                <div class="result-item"><div class="result-label">Total P&L</div><div class="result-value" id="bt-pnl">—</div></div>
+                <div class="result-item"><div class="result-label">Win Rate</div><div class="result-value" id="bt-wr">—</div></div>
+                <div class="result-item"><div class="result-label">Trades</div><div class="result-value" id="bt-trades">—</div></div>
+                <div class="result-item"><div class="result-label">Max Drawdown</div><div class="result-value" id="bt-dd">—</div></div>
+                <div class="result-item"><div class="result-label">Sharpe Ratio</div><div class="result-value" id="bt-sharpe">—</div></div>
+                <div class="result-item"><div class="result-label">Profit Factor</div><div class="result-value" id="bt-pf">—</div></div>
+              </div>
+              <div style="padding:4px 20px 16px"><canvas id="btEquityChart" height="160" style="width:100%"></canvas></div>
+            </div>
+
+            <div class="card">
+              <div class="card-header"><span class="card-title">Trade Log</span></div>
+              <div style="overflow-x:auto;max-height:360px;overflow-y:auto">
+                <table class="backtest-table">
+                  <thead><tr><th>Entry Date</th><th>Expiry</th><th>Spot</th><th>Premium ₹</th><th>P&L ₹</th><th>Exit Reason</th></tr></thead>
+                  <tbody id="btTradeLog"><tr><td colspan="6" style="text-align:center;padding:30px;color:var(--muted)">Run a backtest to see results</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ SIMULATOR ══ -->
+    <div class="section" id="section-simulator">
+      <div class="dashboard">
+        <div class="page-title">Strategy Simulator</div>
+        <div class="page-subtitle">Build any multi-leg strategy and visualize the payoff — powered by real spot prices</div>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-header"><span class="card-title">Strategy Builder</span></div>
+            <div style="padding:20px">
+              <div class="form-row">
+                <div class="form-group"><label class="form-label">Index</label>
+                  <select class="form-control" id="sim-index" onchange="loadSimSpot()">
+                    <option value="Nifty 50">NIFTY 50</option>
+                    <option value="BANKNIFTY">BANKNIFTY</option>
+                    <option value="FINNIFTY">FINNIFTY</option>
+                  </select></div>
+                <div class="form-group"><label class="form-label">Expiry Type</label>
+                  <select class="form-control" id="sim-expiry"><option>Weekly</option><option>Monthly</option></select></div>
+              </div>
+              <div class="form-group" style="margin-bottom:12px">
+                <label class="form-label">Spot Price (live)</label>
+                <input type="number" class="form-control" id="sim-spot" oninput="computePayoff()">
+              </div>
+            </div>
+
+            <div class="card-header" style="border-top:1px solid var(--border)">
+              <span class="card-title">Legs</span>
+              <span class="card-action" onclick="addSimLeg()">+ Add Leg</span>
+            </div>
+            <div style="overflow-x:auto;padding:0 4px">
+              <table class="legs-table">
+                <thead><tr><th>B/S</th><th>Type</th><th>Strike</th><th>Premium</th><th>Lots</th><th></th></tr></thead>
+                <tbody id="simLegsBody"></tbody>
+              </table>
+            </div>
+
+            <div class="preset-grid">
+              <button class="preset-btn" onclick="simPreset('straddle')">Straddle</button>
+              <button class="preset-btn" onclick="simPreset('strangle')">Strangle</button>
+              <button class="preset-btn" onclick="simPreset('condor')">Iron Condor</button>
+              <button class="preset-btn" onclick="simPreset('butterfly')">Butterfly</button>
+              <button class="preset-btn" onclick="simPreset('bull_call')">Bull Call</button>
+              <button class="preset-btn" onclick="simPreset('bear_put')">Bear Put</button>
+            </div>
+
+            <div id="simSummary"></div>
+          </div>
+
+          <div>
+            <div class="card" style="margin-bottom:16px">
+              <div class="card-header"><span class="card-title">Payoff Diagram</span><span id="payoffLabel" style="font-size:11px;color:var(--muted)">At Expiry</span></div>
+              <div style="padding:16px 20px"><canvas id="payoffChart" height="220" style="width:100%"></canvas></div>
+            </div>
+            <div class="card">
+              <div class="card-header"><span class="card-title">Strategy Stats</span></div>
+              <div class="results-panel">
+                <div class="result-item"><div class="result-label">Max Profit</div><div class="result-value" id="sim-maxprofit" style="color:var(--green)">—</div></div>
+                <div class="result-item"><div class="result-label">Max Loss</div><div class="result-value" id="sim-maxloss" style="color:var(--red)">—</div></div>
+                <div class="result-item"><div class="result-label">Breakeven</div><div class="result-value" id="sim-be" style="font-size:13px">—</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ CHAIN ══ -->
+    <div class="section" id="section-chain">
+      <div class="dashboard">
+        <div class="page-title">Options Chain</div>
+        <div class="page-subtitle">Live options chain with B-S pricing from real NSE spot data</div>
+
+        <div style="display:flex;gap:12px;margin-bottom:20px;align-items:center;flex-wrap:wrap">
+          <select class="form-control" style="width:160px" id="chain-index" onchange="loadChain()">
+            <option value="NIFTY 50">NIFTY 50</option>
+            <option value="BANKNIFTY">BANKNIFTY</option>
+            <option value="FINNIFTY">FINNIFTY</option>
+          </select>
+          <select class="form-control" style="width:140px" id="chain-expiry" onchange="loadChain()">
+            <option value="weekly">Weekly</option>
+            <option value="monthly">Monthly</option>
+          </select>
+          <button class="btn-primary" style="padding:9px 20px" onclick="loadChain()">🔄 Refresh</button>
+          <div style="display:flex;gap:20px;font-size:12px;margin-left:8px">
+            <span style="color:var(--muted)">Spot: <b id="chain-spot" style="color:var(--text)">—</b></span>
+            <span style="color:var(--muted)">ATM: <b id="chain-atm" style="color:var(--accent)">—</b></span>
+            <span style="color:var(--muted)">PCR: <b id="chain-pcr" style="color:var(--accent)">—</b></span>
+            <span style="color:var(--muted)">Max Pain: <b id="chain-maxpain" style="color:var(--accent3)">—</b></span>
+            <span style="color:var(--muted)">DTE: <b id="chain-dte" style="color:var(--text)">—</b></span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div id="chainLoading" class="loading-row"><div class="spinner"></div> Fetching live data…</div>
+          <div style="overflow-x:auto;display:none" id="chainTableWrap">
+            <table class="chain-table">
+              <thead>
+                <tr>
+                  <th colspan="5" style="color:var(--accent)">CALLS</th>
+                  <th style="background:var(--bg2)">STRIKE</th>
+                  <th colspan="5" style="color:var(--red)">PUTS</th>
+                </tr>
+                <tr>
+                  <th style="color:var(--accent)">OI</th>
+                  <th style="color:var(--accent)">IV%</th>
+                  <th style="color:var(--accent)">Delta</th>
+                  <th style="color:var(--accent)">Theta</th>
+                  <th style="color:var(--accent)">LTP ₹</th>
+                  <th style="background:var(--bg2)">STRIKE</th>
+                  <th style="color:var(--red)">LTP ₹</th>
+                  <th style="color:var(--red)">Theta</th>
+                  <th style="color:var(--red)">Delta</th>
+                  <th style="color:var(--red)">IV%</th>
+                  <th style="color:var(--red)">OI</th>
+                </tr>
+              </thead>
+              <tbody id="chainBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ HISTORY ══ -->
+    <div class="section" id="section-history">
+      <div class="dashboard">
+        <div class="page-title">Price History</div>
+        <div class="page-subtitle">Real OHLCV data from NSE via OpenChart</div>
+
+        <div style="display:flex;gap:12px;margin-bottom:20px;align-items:flex-end;flex-wrap:wrap">
+          <div class="form-group">
+            <label class="form-label">Symbol</label>
+            <select class="form-control" style="width:160px" id="hist-symbol">
+              <option value="Nifty 50">NIFTY 50</option>
+              <option value="BANKNIFTY">BANKNIFTY</option>
+              <option value="FINNIFTY">FINNIFTY</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Days</label>
+            <select class="form-control" style="width:100px" id="hist-days">
+              <option value="30">30 Days</option>
+              <option value="90">90 Days</option>
+              <option value="180">180 Days</option>
+              <option value="365" selected>1 Year</option>
+              <option value="730">2 Years</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Interval</label>
+            <select class="form-control" style="width:100px" id="hist-interval">
+              <option value="1d">Daily</option>
+              <option value="1w">Weekly</option>
+            </select>
+          </div>
+          <button class="btn-primary" style="padding:9px 20px" onclick="loadHistory()">Load Data</button>
+        </div>
+
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-header"><span class="card-title">Price Chart</span></div>
+          <div style="padding:20px"><canvas id="histChart" height="200" style="width:100%"></canvas></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><span class="card-title">OHLCV Data</span><span id="histCount" style="font-size:11px;color:var(--muted)"></span></div>
+          <div style="overflow-x:auto;max-height:400px;overflow-y:auto">
+            <table class="backtest-table">
+              <thead><tr><th>Date</th><th>Open</th><th>High</th><th>Low</th><th>Close</th><th>Volume</th><th>Change</th></tr></thead>
+              <tbody id="histBody"><tr><td colspan="7" style="text-align:center;padding:30px;color:var(--muted)">Click "Load Data" to fetch real NSE data</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ SETUP ══ -->
+    <div class="section" id="section-setup">
+      <div class="dashboard">
+        <div class="page-title">Setup Guide</div>
+        <div class="page-subtitle">Get QuantRep running with real data in 3 steps</div>
+
+        <div class="card" style="max-width:720px">
+          <div style="padding:28px;line-height:1.8">
+            <div style="font-size:15px;font-weight:700;margin-bottom:20px;color:var(--accent)">Prerequisites</div>
+            <p style="font-size:13px;color:var(--muted);margin-bottom:24px">Python 3.8+ and pip required.</p>
+
+            <div style="font-size:13px;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:12px">Step 1 — Install dependencies</div>
+            <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:16px;font-family:'JetBrains Mono',monospace;font-size:13px;margin-bottom:24px;color:var(--accent)">
+              pip install openchart flask flask-cors numpy
+            </div>
+
+            <div style="font-size:13px;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:12px">Step 2 — Start the backend</div>
+            <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:16px;font-family:'JetBrains Mono',monospace;font-size:13px;margin-bottom:24px;color:var(--accent)">
+              python app.py
+            </div>
+            <p style="font-size:13px;color:var(--muted);margin-bottom:24px">The API will start at <b style="color:var(--text)">http://localhost:5000</b>. The sidebar will show a green dot when connected.</p>
+
+            <div style="font-size:13px;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:12px">Step 3 — Open this file</div>
+            <p style="font-size:13px;color:var(--muted);margin-bottom:24px">Open <b style="color:var(--text)">quantrep.html</b> in your browser. All sections will now use real NSE data.</p>
+
+            <div style="background:rgba(0,229,160,.06);border:1px solid rgba(0,229,160,.2);border-radius:8px;padding:16px">
+              <div style="font-size:13px;font-weight:700;color:var(--accent);margin-bottom:8px">💡 Data Notes</div>
+              <ul style="font-size:12px;color:var(--muted);padding-left:20px;line-height:2">
+                <li>Spot prices are real — fetched live from NSE via OpenChart</li>
+                <li>Options are priced using Black-Scholes (no live tick data needed)</li>
+                <li>Backtests use real historical daily closes from NSE</li>
+                <li>First run downloads master symbol data (~5s) then caches it</li>
+                <li>OpenChart is for educational use — not affiliated with NSE</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div class="notification" id="notification"></div>
+
+<script>
+// Auto-detect: use Render backend in production, localhost in dev
+const API = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? 'http://localhost:5000/api'
+  : 'https://quantrep-api.onrender.com/api'; // ← Render will give you this URL
+let backendOnline = false;
+let lastBacktestData = null;
+let simLegs = [];
+
+// ── Notify ──────────────────────────────────────────────────────────────────
+function notify(msg, type='ok') {
+  const n = document.getElementById('notification');
+  n.textContent = msg;
+  n.className = 'notification show' + (type==='error' ? ' error' : '');
+  clearTimeout(n._t);
+  n._t = setTimeout(() => n.classList.remove('show'), 4000);
+}
+
+// ── API health check ─────────────────────────────────────────────────────
+async function checkBackend() {
+  try {
+    const r = await fetch(`${API}/health`, {signal: AbortSignal.timeout(3000)});
+    const d = await r.json();
+    if (d.status === 'ok') {
+      backendOnline = true;
+      document.getElementById('apiDot').className = 'api-dot online';
+      document.getElementById('apiStatusText').textContent = 'Connected';
+      document.getElementById('apiStatusText').style.color = 'var(--green)';
+      document.getElementById('marketStatus').innerHTML = '<div class="status-dot"></div> Live Data';
+      loadIndices();
+    }
+  } catch(e) {
+    backendOnline = false;
+    document.getElementById('apiDot').className = 'api-dot offline';
+    document.getElementById('apiStatusText').textContent = 'Offline';
+    document.getElementById('apiStatusText').style.color = 'var(--red)';
+    document.getElementById('marketStatus').innerHTML = '<div class="status-dot" style="background:var(--red);animation:none"></div> Backend Offline';
+  }
+}
+
+// ── Fetch helpers ────────────────────────────────────────────────────────
+async function apiFetch(url, opts={}) {
+  if (!backendOnline) throw new Error('Backend offline. See Setup Guide.');
+  const r = await fetch(url, opts);
+  const d = await r.json();
+  if (d.error) throw new Error(d.error);
+  return d;
+}
+
+// ── Format helpers ───────────────────────────────────────────────────────
+const fmtINR = v => '₹' + Math.abs(v).toLocaleString('en-IN', {maximumFractionDigits:0});
+const fmtPnl = v => (v >= 0 ? '+' : '-') + fmtINR(v);
+const clrPnl = v => v >= 0 ? 'var(--green)' : 'var(--red)';
+
+// ── Nav ──────────────────────────────────────────────────────────────────
+function showLanding() {
+  document.getElementById('landingPage').style.display = 'block';
+  document.getElementById('appContainer').style.display = 'none';
+  document.querySelectorAll('nav ul a').forEach(a => a.classList.remove('active'));
+  document.getElementById('nav-home').classList.add('active');
+}
+
+function enterApp(sec) {
+  document.getElementById('landingPage').style.display = 'none';
+  document.getElementById('appContainer').style.display = 'flex';
+  switchSection(sec);
+}
+
+function switchSection(sec) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.sidebar-item').forEach(s => s.classList.remove('active'));
+  document.getElementById('section-' + sec).classList.add('active');
+  const sb = document.getElementById('sb-' + sec);
+  if (sb) sb.classList.add('active');
+
+  if (sec === 'chain')    loadChain();
+  if (sec === 'simulator') initSimulator();
+  if (sec === 'history')  {}  // user clicks manually
+}
+
+// ── Load all indices ─────────────────────────────────────────────────────
+async function loadIndices() {
+  const indices = [
+    {sym:'Nifty 50', label:'NIFTY 50', ids:['idx-nifty','idx-nifty-chng','dash-nifty','dash-nifty-chng']},
+    {sym:'BANKNIFTY',label:'BANKNIFTY',ids:['idx-bnf','idx-bnf-chng','dash-bnf','dash-bnf-chng']},
+    {sym:'FINNIFTY', label:'FINNIFTY', ids:['idx-fin','idx-fin-chng','dash-fin','dash-fin-chng']},
+  ];
+  for (const idx of indices) {
+    try {
+      const d = await apiFetch(`${API}/spot?symbol=${encodeURIComponent(idx.sym)}`);
+      const [barVal, barChng, dashVal, dashChng] = idx.ids.map(id => document.getElementById(id));
+      barVal.textContent = d.spot.toLocaleString('en-IN');
+      dashVal.textContent = d.spot.toLocaleString('en-IN');
+      const chngStr = (d.pct >= 0 ? '▲ +' : '▼ ') + d.pct + '%';
+      const cls = d.pct >= 0 ? 'index-change pos' : 'index-change neg';
+      barChng.textContent = chngStr; barChng.className = cls;
+      dashChng.textContent = (d.pct >= 0 ? '↑ +' : '↓ ') + d.pct + '%';
+      dashChng.className = 'stat-change ' + (d.pct >= 0 ? 'pos' : 'neg');
+    } catch(e) { /* silent */ }
+  }
+  document.getElementById('lastUpdated').textContent = new Date().toLocaleTimeString('en-IN');
+}
+
+// ── Quick Backtest (dashboard) ────────────────────────────────────────────
+async function runQuickBacktest() {
+  const btn = document.getElementById('qbBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Running…';
+
+  const presets = {
+    straddle:   [{type:'CE',strike_offset:0,action:'SELL'},{type:'PE',strike_offset:0,action:'SELL'}],
+    strangle:   [{type:'CE',strike_offset:200,action:'SELL'},{type:'PE',strike_offset:-200,action:'SELL'}],
+    iron_condor:[{type:'CE',strike_offset:400,action:'BUY'},{type:'CE',strike_offset:200,action:'SELL'},
+                 {type:'PE',strike_offset:-200,action:'SELL'},{type:'PE',strike_offset:-400,action:'BUY'}],
+    butterfly:  [{type:'CE',strike_offset:-200,action:'BUY'},{type:'CE',strike_offset:0,action:'SELL'},
+                 {type:'CE',strike_offset:0,action:'SELL'},{type:'CE',strike_offset:200,action:'BUY'}],
+  };
+
+  const strategy = document.getElementById('qb-strategy').value;
+  const body = {
+    symbol: document.getElementById('qb-index').value,
+    start:  document.getElementById('qb-from').value,
+    end:    document.getElementById('qb-to').value,
+    sl_pct: 50, target_pct: 30, lots: 1,
+    legs:   presets[strategy] || presets.straddle
+  };
+
+  try {
+    const d = await apiFetch(`${API}/backtest`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const s = d.summary;
+    document.getElementById('qb-pnl').textContent = fmtPnl(s.total_pnl);
+    document.getElementById('qb-pnl').style.color = clrPnl(s.total_pnl);
+    document.getElementById('qb-wr').textContent = s.win_rate + '%';
+    document.getElementById('qb-trades').textContent = s.total_trades;
+    document.getElementById('qb-sharpe').textContent = s.sharpe;
+    document.getElementById('qb-dd').textContent = fmtINR(s.max_drawdown);
+    document.getElementById('qb-dd').style.color = 'var(--red)';
+    document.getElementById('qb-pf').textContent = s.profit_factor;
+    document.getElementById('qbResults').style.display = 'block';
+    drawEquityChart('equityChart', d.equity, 200);
+    document.getElementById('equityChartLabel').textContent = `${s.total_trades} trades · ${body.symbol}`;
+    notify(`Backtest complete! ${s.total_trades} trades, Win rate: ${s.win_rate}%`);
+  } catch(e) {
+    notify(e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '▶ Run Backtest';
+  }
+}
+
+// ── Full Backtest ─────────────────────────────────────────────────────────
+const BT_PRESETS = {
+  straddle:   [{type:'CE',strike_offset:0,action:'SELL'},{type:'PE',strike_offset:0,action:'SELL'}],
+  strangle:   [{type:'CE',strike_offset:200,action:'SELL'},{type:'PE',strike_offset:-200,action:'SELL'}],
+  iron_condor:[{type:'CE',strike_offset:400,action:'BUY'},{type:'CE',strike_offset:200,action:'SELL'},
+               {type:'PE',strike_offset:-200,action:'SELL'},{type:'PE',strike_offset:-400,action:'BUY'}],
+  butterfly:  [{type:'CE',strike_offset:-200,action:'BUY'},{type:'CE',strike_offset:0,action:'SELL'},
+               {type:'CE',strike_offset:0,action:'SELL'},{type:'CE',strike_offset:200,action:'BUY'}],
+  bull_call:  [{type:'CE',strike_offset:0,action:'BUY'},{type:'CE',strike_offset:200,action:'SELL'}],
+  bear_put:   [{type:'PE',strike_offset:0,action:'BUY'},{type:'PE',strike_offset:-200,action:'SELL'}],
+};
+
+function loadBtPreset(name) {
+  const legs = BT_PRESETS[name] || BT_PRESETS.straddle;
+  const tbody = document.getElementById('btLegsBody');
+  tbody.innerHTML = '';
+  legs.forEach(l => {
+    const tr = document.createElement('tr');
+    const isBuy = l.action === 'BUY';
+    tr.innerHTML = `
+      <td><span class="leg-type ${isBuy?'buy':'sell'}">${l.action}</span></td>
+      <td>${l.type}</td>
+      <td>${l.strike_offset === 0 ? '0 (ATM)' : (l.strike_offset > 0 ? '+' : '') + l.strike_offset}</td>
+      <td style="color:var(--red);cursor:pointer" onclick="this.closest('tr').remove()">✕</td>
+    `;
+    tr.dataset.leg = JSON.stringify(l);
+    tbody.appendChild(tr);
+  });
+  notify(`Loaded ${name} preset`);
+}
+
+function addBtLeg() {
+  const tbody = document.getElementById('btLegsBody');
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td><span class="leg-type sell">SELL</span></td>
+    <td>CE</td>
+    <td>0 (ATM)</td>
+    <td style="color:var(--red);cursor:pointer" onclick="this.closest('tr').remove()">✕</td>
+  `;
+  tr.dataset.leg = JSON.stringify({type:'CE',strike_offset:0,action:'SELL'});
+  tbody.appendChild(tr);
+}
+
+async function runBacktest() {
+  const btn = document.getElementById('btRunBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Fetching real NSE data…';
+
+  // parse legs from table rows
+  const rows = document.getElementById('btLegsBody').querySelectorAll('tr');
+  const legs = [];
+  rows.forEach(r => {
+    if (r.dataset.leg) {
+      legs.push(JSON.parse(r.dataset.leg));
+    } else {
+      // fallback: read from cells
+      const cells = r.querySelectorAll('td');
+      if (cells.length >= 3) {
+        const action = cells[0].textContent.trim();
+        const type   = cells[1].textContent.trim();
+        const offStr = cells[2].textContent.replace('(ATM)','').trim();
+        const offset = parseInt(offStr) || 0;
+        legs.push({type, strike_offset: offset, action});
+      }
+    }
+  });
+
+  const body = {
+    symbol:     document.getElementById('bt-index').value,
+    start:      document.getElementById('bt-from').value,
+    end:        document.getElementById('bt-to').value,
+    expiry_type:document.getElementById('bt-expiry').value,
+    sl_pct:     parseFloat(document.getElementById('bt-sl').value),
+    target_pct: parseFloat(document.getElementById('bt-target').value),
+    lots:       parseInt(document.getElementById('bt-lots').value),
+    legs:       legs.length ? legs : BT_PRESETS.straddle
+  };
+
+  try {
+    const d = await apiFetch(`${API}/backtest`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    lastBacktestData = d;
+    const s = d.summary;
+
+    document.getElementById('bt-pnl').textContent = fmtPnl(s.total_pnl);
+    document.getElementById('bt-pnl').style.color = clrPnl(s.total_pnl);
+    document.getElementById('bt-wr').textContent = s.win_rate + '%';
+    document.getElementById('bt-trades').textContent = s.total_trades;
+    document.getElementById('bt-dd').textContent = fmtINR(s.max_drawdown);
+    document.getElementById('bt-dd').style.color = 'var(--red)';
+    document.getElementById('bt-sharpe').textContent = s.sharpe;
+    document.getElementById('bt-pf').textContent = s.profit_factor;
+
+    // equity curve
+    drawEquityChart('btEquityChart', d.equity, 160);
+
+    // trade log
+    const tbody = document.getElementById('btTradeLog');
+    tbody.innerHTML = '';
+    d.trades.forEach(t => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${t.date}</td>
+        <td>${t.expiry}</td>
+        <td style="font-family:JetBrains Mono,monospace">${t.spot.toLocaleString('en-IN')}</td>
+        <td style="font-family:JetBrains Mono,monospace">₹${t.premium}</td>
+        <td style="font-family:JetBrains Mono,monospace;color:${clrPnl(t.pnl)}">${fmtPnl(t.pnl)}</td>
+        <td style="font-size:11px;color:${t.exit_reason==='SL Hit'?'var(--red)':t.exit_reason==='Target Hit'?'var(--green)':'var(--muted)'}">${t.exit_reason}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    document.getElementById('btExportBtn').style.display = 'inline';
+    notify(`✓ Backtest done! ${s.total_trades} trades, P&L: ${fmtPnl(s.total_pnl)}`);
+  } catch(e) {
+    notify('Error: ' + e.message, 'error');
+    document.getElementById('btTradeLog').innerHTML = `<tr><td colspan="6"><div class="error-box">${e.message}</div></td></tr>`;
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '▶ Run Backtest';
+  }
+}
+
+function exportCsv() {
+  if (!lastBacktestData) return;
+  const rows = [['Date','Expiry','Spot','Premium','PnL','Exit Reason']];
+  lastBacktestData.trades.forEach(t => rows.push([t.date,t.expiry,t.spot,t.premium,t.pnl,t.exit_reason]));
+  const csv = rows.map(r => r.join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = 'quantrep_backtest.csv';
+  a.click();
+}
+
+// ── Equity chart (canvas) ─────────────────────────────────────────────────
+function drawEquityChart(canvasId, equity, h=200) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas || !equity || !equity.length) return;
+  canvas.height = h;
+  const W = canvas.offsetWidth || 500;
+  canvas.width = W;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, W, h);
+
+  const values = equity.map(e => e.cumulative_pnl);
+  const maxV = Math.max(...values, 0);
+  const minV = Math.min(...values, 0);
+  const range = maxV - minV || 1;
+  const pad = 10;
+  const xStep = (W - 40) / Math.max(values.length - 1, 1);
+
+  const toX = i => 40 + i * xStep;
+  const toY = v => pad + (h - pad*2) * (1 - (v - minV) / range);
+
+  // zero line
+  const zy = toY(0);
+  ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4,4]);
+  ctx.beginPath(); ctx.moveTo(40, zy); ctx.lineTo(W, zy); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // fill
+  const g = ctx.createLinearGradient(0, 0, 0, h);
+  const isPositive = values[values.length-1] >= 0;
+  g.addColorStop(0, isPositive ? 'rgba(0,229,160,0.2)' : 'rgba(255,69,96,0.2)');
+  g.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.beginPath();
+  values.forEach((v, i) => { const x=toX(i),y=toY(v); i===0?ctx.moveTo(x,y):ctx.lineTo(x,y); });
+  ctx.lineTo(toX(values.length-1), zy);
+  ctx.lineTo(40, zy);
+  ctx.closePath();
+  ctx.fillStyle = g;
+  ctx.fill();
+
+  // line (colour per segment)
+  for (let i = 1; i < values.length; i++) {
+    ctx.beginPath();
+    ctx.strokeStyle = values[i] >= 0 ? '#00e5a0' : '#ff4560';
+    ctx.lineWidth = 2;
+    ctx.lineJoin = 'round';
+    ctx.moveTo(toX(i-1), toY(values[i-1]));
+    ctx.lineTo(toX(i), toY(values[i]));
+    ctx.stroke();
+  }
+
+  // last dot
+  const lx = toX(values.length-1), ly = toY(values[values.length-1]);
+  ctx.beginPath();
+  ctx.arc(lx, ly, 4, 0, Math.PI*2);
+  ctx.fillStyle = isPositive ? '#00e5a0' : '#ff4560';
+  ctx.fill();
+}
+
+// ── Options Chain ─────────────────────────────────────────────────────────
+async function loadChain() {
+  const sym = document.getElementById('chain-index').value;
+  const exp = document.getElementById('chain-expiry').value;
+  document.getElementById('chainLoading').style.display = 'flex';
+  document.getElementById('chainTableWrap').style.display = 'none';
+
+  try {
+    const d = await apiFetch(`${API}/chain?symbol=${encodeURIComponent(sym)}&expiry_type=${exp}`);
+    document.getElementById('chain-spot').textContent = d.spot.toLocaleString('en-IN');
+    document.getElementById('chain-atm').textContent = d.atm.toLocaleString('en-IN');
+    document.getElementById('chain-pcr').textContent = d.pcr;
+    document.getElementById('chain-maxpain').textContent = d.max_pain.toLocaleString('en-IN');
+    document.getElementById('chain-dte').textContent = d.dte + 'd';
+
+    const tbody = document.getElementById('chainBody');
+    tbody.innerHTML = '';
+    d.chain.forEach(row => {
+      const tr = document.createElement('tr');
+      if (row.is_atm) tr.className = 'atm';
+      tr.innerHTML = `
+        <td class="call-side">${(row.call.oi/1000).toFixed(0)}K</td>
+        <td class="call-side">${row.call.iv}%</td>
+        <td class="call-side">${row.call.delta}</td>
+        <td class="call-side">${row.call.theta}</td>
+        <td class="call-side" style="font-weight:600">₹${row.call.ltp}</td>
+        <td class="strike-col" style="background:var(--bg3);font-weight:${row.is_atm?700:500}">${row.strike.toLocaleString('en-IN')}</td>
+        <td class="put-side" style="font-weight:600">₹${row.put.ltp}</td>
+        <td class="put-side">${row.put.theta}</td>
+        <td class="put-side">${row.put.delta}</td>
+        <td class="put-side">${row.put.iv}%</td>
+        <td class="put-side">${(row.put.oi/1000).toFixed(0)}K</td>
+      `;
+      tbody.appendChild(tr);
+    });
+    document.getElementById('chainLoading').style.display = 'none';
+    document.getElementById('chainTableWrap').style.display = 'block';
+    notify(`Chain loaded: ${sym} · ${d.dte}d to expiry`);
+  } catch(e) {
+    document.getElementById('chainLoading').innerHTML = `<div class="error-box" style="margin:0">${e.message}</div>`;
+    notify(e.message, 'error');
+  }
+}
+
+// ── Simulator ─────────────────────────────────────────────────────────────
+async function initSimulator() {
+  try {
+    const sym = document.getElementById('sim-index').value;
+    const d = await apiFetch(`${API}/spot?symbol=${encodeURIComponent(sym)}`);
+    document.getElementById('sim-spot').value = d.spot;
+    if (!simLegs.length) simPreset('straddle');
+    else renderSimLegs();
+  } catch(e) {
+    document.getElementById('sim-spot').value = 24000;
+    if (!simLegs.length) simPreset('straddle');
+  }
+}
+
+async function loadSimSpot() {
+  try {
+    const sym = document.getElementById('sim-index').value;
+    const d = await apiFetch(`${API}/spot?symbol=${encodeURIComponent(sym)}`);
+    document.getElementById('sim-spot').value = d.spot;
+    await computePayoff();
+  } catch(e) {}
+}
+
+function simPreset(name) {
+  const spot = parseFloat(document.getElementById('sim-spot').value) || 24000;
+  const step = spot > 40000 ? 100 : 50;
+  const atm = Math.round(spot / step) * step;
+  const presets = {
+    straddle:  [{action:'SELL',type:'CE',strike:atm,premium:180},{action:'SELL',type:'PE',strike:atm,premium:175}],
+    strangle:  [{action:'SELL',type:'CE',strike:atm+200,premium:90},{action:'SELL',type:'PE',strike:atm-200,premium:85}],
+    condor:    [{action:'BUY',type:'CE',strike:atm+400,premium:40},{action:'SELL',type:'CE',strike:atm+200,premium:90},
+                {action:'SELL',type:'PE',strike:atm-200,premium:85},{action:'BUY',type:'PE',strike:atm-400,premium:35}],
+    butterfly: [{action:'BUY',type:'CE',strike:atm-200,premium:260},{action:'SELL',type:'CE',strike:atm,premium:180},
+                {action:'SELL',type:'CE',strike:atm,premium:180},{action:'BUY',type:'CE',strike:atm+200,premium:100}],
+    bull_call: [{action:'BUY',type:'CE',strike:atm,premium:180},{action:'SELL',type:'CE',strike:atm+200,premium:90}],
+    bear_put:  [{action:'BUY',type:'PE',strike:atm,premium:175},{action:'SELL',type:'PE',strike:atm-200,premium:85}],
+  };
+  simLegs = (presets[name] || presets.straddle).map((l,i) => ({...l, lots:1, id:Date.now()+i}));
+  renderSimLegs();
+  computePayoff();
+}
+
+function addSimLeg() {
+  const spot = parseFloat(document.getElementById('sim-spot').value) || 24000;
+  const atm = Math.round(spot / 50) * 50;
+  simLegs.push({id:Date.now(),action:'SELL',type:'CE',strike:atm,premium:150,lots:1});
+  renderSimLegs();
+  computePayoff();
+}
+
+function renderSimLegs() {
+  const tbody = document.getElementById('simLegsBody');
+  tbody.innerHTML = '';
+  simLegs.forEach(l => {
+    const isBuy = l.action === 'BUY';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><span class="leg-type ${isBuy?'buy':'sell'}">${l.action}</span></td>
+      <td>${l.type}</td>
+      <td style="font-family:JetBrains Mono,monospace">${l.strike.toLocaleString('en-IN')}</td>
+      <td style="color:${isBuy?'var(--red)':'var(--green)'};font-family:JetBrains Mono,monospace">₹${l.premium}</td>
+      <td>${l.lots}</td>
+      <td style="color:var(--red);cursor:pointer" onclick="removeSimLeg(${l.id})">✕</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function removeSimLeg(id) {
+  simLegs = simLegs.filter(l => l.id !== id);
+  renderSimLegs();
+  computePayoff();
+}
+
+async function computePayoff() {
+  if (!simLegs.length) return;
+  const spot = parseFloat(document.getElementById('sim-spot').value);
+  if (!spot) return;
+
+  const sym = document.getElementById('sim-index').value;
+  const lotSizes = {'Nifty 50':75,'BANKNIFTY':30,'FINNIFTY':40};
+  const lotSize = lotSizes[sym] || 75;
+
+  const body = {
+    spot, step: spot > 40000 ? 100 : 50,
+    legs: simLegs.map(l => ({...l, lot_size: lotSize}))
+  };
+
+  try {
+    const d = await apiFetch(`${API}/payoff`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    drawPayoff(d, spot);
+
+    const mpStr = d.max_profit > 1e9 ? '∞' : fmtINR(d.max_profit);
+    const mlStr = d.max_loss  < -1e9 ? '∞' : fmtINR(Math.abs(d.max_loss));
+    document.getElementById('sim-maxprofit').textContent = d.max_profit > 0 ? '+' + mpStr : mpStr;
+    document.getElementById('sim-maxloss').textContent = '-' + mlStr;
+    document.getElementById('sim-be').textContent = d.breakevens.map(b => b.toLocaleString('en-IN')).join(' / ') || '—';
+
+    // summary pnl rows
+    const totalPrem = simLegs.reduce((a,l) => a + (l.action==='SELL'?1:-1)*l.premium*l.lots*lotSize, 0);
+    document.getElementById('simSummary').innerHTML = `
+      <div class="pnl-row"><span class="label">Net Premium ${totalPrem>=0?'Collected':'Paid'}</span><span style="font-family:JetBrains Mono,monospace;color:${clrPnl(totalPrem)};font-weight:600">${fmtINR(Math.abs(totalPrem))}</span></div>
+      <div class="pnl-row"><span class="label">Breakeven(s)</span><span style="font-family:JetBrains Mono,monospace;font-weight:600;font-size:12px">${d.breakevens.map(b=>b.toLocaleString('en-IN')).join(' · ')||'—'}</span></div>
+    `;
+  } catch(e) { /* silent */ }
+}
+
+function drawPayoff(data, spot) {
+  const canvas = document.getElementById('payoffChart');
+  if (!canvas) return;
+  const W = canvas.offsetWidth || 400;
+  canvas.width = W;
+  canvas.height = 220;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, W, 220);
+
+  const points = data.points;
+  const values = points.map(p => p.pnl);
+  const prices = points.map(p => p.price);
+  const maxV = Math.max(...values, 0);
+  const minV = Math.min(...values, 0);
+  const range = maxV - minV || 1;
+  const H = 220, pad = 30;
+  const xStep = (W - 40) / (points.length - 1);
+
+  const toX = i => 40 + i * xStep;
+  const toY = v => pad + (H - pad*2) * (1 - (v - minV) / range);
+
+  // zero
+  const zy = toY(0);
+  ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4,4]);
+  ctx.beginPath(); ctx.moveTo(40,zy); ctx.lineTo(W,zy); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // spot line
+  const spotIdx = prices.findIndex(p => p >= spot);
+  if (spotIdx >= 0) {
+    const sx = toX(spotIdx);
+    ctx.strokeStyle = 'rgba(255,107,53,0.5)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3,3]);
+    ctx.beginPath(); ctx.moveTo(sx,0); ctx.lineTo(sx,H); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(255,107,53,0.8)';
+    ctx.font = '10px JetBrains Mono';
+    ctx.fillText('Spot', sx+4, 14);
+  }
+
+  // gradient fill
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, 'rgba(0,229,160,0.18)');
+  g.addColorStop(1, 'rgba(255,69,96,0.12)');
+  ctx.beginPath();
+  values.forEach((v,i) => { const x=toX(i),y=toY(v); i===0?ctx.moveTo(x,y):ctx.lineTo(x,y); });
+  ctx.lineTo(toX(values.length-1), zy);
+  ctx.lineTo(40, zy);
+  ctx.closePath();
+  ctx.fillStyle = g;
+  ctx.fill();
+
+  // line
+  for (let i = 1; i < values.length; i++) {
+    ctx.beginPath();
+    ctx.strokeStyle = values[i] >= 0 ? '#00e5a0' : '#ff4560';
+    ctx.lineWidth = 2.5;
+    ctx.lineJoin = 'round';
+    ctx.moveTo(toX(i-1), toY(values[i-1]));
+    ctx.lineTo(toX(i), toY(values[i]));
+    ctx.stroke();
+  }
+
+  // breakevens
+  if (data.breakevens) {
+    data.breakevens.forEach(be => {
+      const beIdx = prices.findIndex(p => p >= be);
+      if (beIdx < 0) return;
+      const bx = toX(beIdx);
+      ctx.strokeStyle = 'rgba(124,92,252,0.6)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([2,2]);
+      ctx.beginPath(); ctx.moveTo(bx,0); ctx.lineTo(bx,H); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = 'var(--accent2)';
+      ctx.font = '9px JetBrains Mono';
+      ctx.fillText(be.toLocaleString('en-IN'), bx-18, H-4);
+    });
+  }
+
+  // axis labels
+  ctx.fillStyle = 'rgba(107,114,128,0.8)';
+  ctx.font = '10px JetBrains Mono';
+  ctx.fillText(prices[0].toLocaleString('en-IN'), 40, H-4);
+  ctx.fillText(prices[prices.length-1].toLocaleString('en-IN'), W-55, H-4);
+  const topLbl = maxV >= 0 ? '+' + fmtINR(maxV) : fmtINR(maxV);
+  ctx.fillStyle = '#00e5a0';
+  ctx.font = '10px JetBrains Mono';
+  ctx.fillText(topLbl, 4, 20);
+  ctx.fillStyle = '#ff4560';
+  ctx.fillText(fmtINR(minV), 4, H - pad - 4);
+}
+
+// ── Price History ─────────────────────────────────────────────────────────
+async function loadHistory() {
+  const sym      = document.getElementById('hist-symbol').value;
+  const days     = document.getElementById('hist-days').value;
+  const interval = document.getElementById('hist-interval').value;
+
+  const tbody = document.getElementById('histBody');
+  tbody.innerHTML = '<tr><td colspan="7" class="loading-row"><div class="spinner"></div> Fetching from NSE…</td></tr>';
+
+  try {
+    const d = await apiFetch(`${API}/history?symbol=${encodeURIComponent(sym)}&days=${days}&interval=${interval}`);
+    const rows = d.data.reverse(); // newest first
+    tbody.innerHTML = '';
+    rows.forEach((r, i) => {
+      const prev = rows[i+1];
+      const chng = prev ? ((r.close - prev.close)/prev.close*100).toFixed(2) : 0;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${r.date}</td>
+        <td style="font-family:JetBrains Mono,monospace">${r.open.toLocaleString('en-IN')}</td>
+        <td style="font-family:JetBrains Mono,monospace;color:var(--green)">${r.high.toLocaleString('en-IN')}</td>
+        <td style="font-family:JetBrains Mono,monospace;color:var(--red)">${r.low.toLocaleString('en-IN')}</td>
+        <td style="font-family:JetBrains Mono,monospace;font-weight:600">${r.close.toLocaleString('en-IN')}</td>
+        <td style="font-family:JetBrains Mono,monospace;color:var(--muted)">${r.volume ? r.volume.toLocaleString('en-IN') : '—'}</td>
+        <td style="font-family:JetBrains Mono,monospace;color:${chng>=0?'var(--green)':'var(--red)'}">${chng>=0?'+':''}${chng}%</td>
+      `;
+      tbody.appendChild(tr);
+    });
+    document.getElementById('histCount').textContent = `${rows.length} records`;
+
+    // draw chart
+    const canvas = document.getElementById('histChart');
+    const chartData = [...rows].reverse().map((r,i) => ({
+      date: r.date,
+      cumulative_pnl: r.close
+    }));
+    // repurpose equity chart drawer (it just needs values)
+    const rawRows = [...rows].reverse();
+    canvas.height = 200;
+    const W = canvas.offsetWidth || 700;
+    canvas.width = W;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, W, 200);
+    const closes = rawRows.map(r => r.close);
+    const maxC = Math.max(...closes), minC = Math.min(...closes);
+    const rangeC = maxC - minC || 1;
+    const H = 200, pad = 20;
+    const xSt = (W - 40) / Math.max(closes.length-1,1);
+    const tX = i => 40 + i * xSt;
+    const tY = v => pad + (H - pad*2) * (1 - (v - minC) / rangeC);
+    const g = ctx.createLinearGradient(0,0,0,H);
+    g.addColorStop(0,'rgba(124,92,252,0.25)');
+    g.addColorStop(1,'rgba(124,92,252,0)');
+    ctx.beginPath();
+    closes.forEach((v,i) => { i===0?ctx.moveTo(tX(i),tY(v)):ctx.lineTo(tX(i),tY(v)); });
+    ctx.lineTo(tX(closes.length-1),H); ctx.lineTo(40,H); ctx.closePath();
+    ctx.fillStyle = g; ctx.fill();
+    ctx.beginPath();
+    ctx.strokeStyle = 'var(--accent2)'; ctx.lineWidth = 2; ctx.lineJoin = 'round';
+    closes.forEach((v,i) => { i===0?ctx.moveTo(tX(i),tY(v)):ctx.lineTo(tX(i),tY(v)); });
+    ctx.stroke();
+
+    notify(`Loaded ${rows.length} records for ${sym}`);
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="7"><div class="error-box">${e.message}</div></td></tr>`;
+    notify(e.message, 'error');
+  }
+}
+
+// ── Tab clicks ────────────────────────────────────────────────────────────
+document.addEventListener('click', e => {
+  if (e.target.classList.contains('tab')) {
+    e.target.closest('.tabs').querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    e.target.classList.add('active');
+  }
+});
+
+// ── Init ──────────────────────────────────────────────────────────────────
+checkBackend();
+setInterval(checkBackend, 30000); // re-check every 30s
+</script>
+</body>
+</html>
