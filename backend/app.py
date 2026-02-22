@@ -11,13 +11,7 @@ import math
 import json
 
 app = Flask(__name__)
-CORS(app, origins=[
-    "https://*.netlify.app",
-    "http://localhost",
-    "http://localhost:3000",
-    "http://127.0.0.1",
-    "null"   # file:// local access
-])
+CORS(app)  # Allow all origins
 
 # ── OpenChart initialisation (lazy so startup is fast) ─────────────────────
 _nse = None
