@@ -696,7 +696,7 @@
 // Auto-detect: use Render backend in production, localhost in dev
 const API = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
   ? 'http://localhost:5000/api'
-  : 'https://quantrep-api.onrender.com/api'; // ← Render will give you this URL
+  : 'https://quantrep.onrender.com/api'; // ← Render will give you this URL
 let backendOnline = false;
 let lastBacktestData = null;
 let simLegs = [];
