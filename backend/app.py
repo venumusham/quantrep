@@ -127,12 +127,20 @@ def health():
 def spot():
     """GET /api/spot?symbol=NIFTY 50"""
     symbol  = request.args.get('symbol', 'Nifty 50')
+    # Map frontend symbol names to OpenChart IDX names
+    symbol_map = {
+        'NIFTY 50':  'Nifty 50',
+        'Nifty 50':  'Nifty 50',
+        'BANKNIFTY': 'Nifty Bank',
+        'FINNIFTY':  'Nifty Fin Service',
+        'SENSEX':    'Nifty 50',
+    }
+    symbol = symbol_map.get(symbol, symbol)
     end     = datetime.datetime.now()
     start   = end - datetime.timedelta(days=5)
     try:
         nse  = get_nse()
-        data = nse.historical(symbol=symbol, exchange='NSE',
-                               start=start, end=end, interval='1d')
+        data = nse.historical(symbol, 'IDX', start, end, '1d')
         if data is None or data.empty:
             return jsonify({'error': 'No data'}), 404
         row  = data.iloc[-1]
@@ -158,14 +166,15 @@ def spot():
 def history():
     """GET /api/history?symbol=Nifty 50&days=365&interval=1d"""
     symbol   = request.args.get('symbol',   'Nifty 50')
+    symbol_map = {'NIFTY 50':'Nifty 50','Nifty 50':'Nifty 50','BANKNIFTY':'Nifty Bank','FINNIFTY':'Nifty Fin Service'}
+    symbol = symbol_map.get(symbol, symbol)
     days     = int(request.args.get('days', 365))
     interval = request.args.get('interval', '1d')
     end      = datetime.datetime.now()
     start    = end - datetime.timedelta(days=days)
     try:
         nse  = get_nse()
-        data = nse.historical(symbol=symbol, exchange='NSE',
-                               start=start, end=end, interval=interval)
+        data = nse.historical(symbol, 'IDX', start, end, interval)
         if data is None or data.empty:
             return jsonify({'error': 'No data'}), 404
         records = []
@@ -212,8 +221,7 @@ def chain():
         nse    = get_nse()
         end    = datetime.datetime.now()
         start  = end - datetime.timedelta(days=5)
-        data   = nse.historical(symbol=symbol, exchange='NSE',
-                                  start=start, end=end, interval='1d')
+        data   = nse.historical(symbol, 'IDX', start, end, '1d')
         spot   = round(float(data.iloc[-1]['close']), 2)
     except Exception as e:
         return jsonify({'error': f'Could not fetch spot: {e}'}), 500
@@ -372,8 +380,8 @@ def backtest():
 
     index_cfg = {
         'Nifty 50'   : {'step': 50,  'lot': 75,  'iv': 0.14, 'ticker': 'Nifty 50'},
-        'BANKNIFTY'  : {'step': 100, 'lot': 30,  'iv': 0.155,'ticker': 'BANKNIFTY'},
-        'FINNIFTY'   : {'step': 50,  'lot': 40,  'iv': 0.148,'ticker': 'FINNIFTY'},
+        'BANKNIFTY'  : {'step': 100, 'lot': 30,  'iv': 0.155,'ticker': 'Nifty Bank'},
+        'FINNIFTY'   : {'step': 50,  'lot': 40,  'iv': 0.148,'ticker': 'Nifty Fin Service'},
     }
     cfg = index_cfg.get(symbol, index_cfg['Nifty 50'])
 
@@ -383,8 +391,7 @@ def backtest():
 
     try:
         nse  = get_nse()
-        data = nse.historical(symbol=cfg['ticker'], exchange='NSE',
-                               start=start_dt, end=end_dt, interval='1d')
+        data = nse.historical(cfg['ticker'], 'IDX', start_dt, end_dt, '1d')
         if data is None or data.empty:
             return jsonify({'error': 'No historical data'}), 404
     except Exception as e:
@@ -535,7 +542,7 @@ def search():
     exchange = request.args.get('exchange', 'NFO')
     try:
         nse     = get_nse()
-        results = nse.search(q, exchange=exchange)
+        results = nse.search(q, exchange)
         return jsonify(json.loads(results.to_json(orient='records')))
     except Exception as e:
         return jsonify({'error': str(e)}), 500
